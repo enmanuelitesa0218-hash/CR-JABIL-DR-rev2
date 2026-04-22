@@ -686,6 +686,59 @@ function initAdmin() {
         subBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
     };
 
+    // --- MANTENIMIENTO DE DATOS ---
+    const btnDelAll = document.getElementById('btn-delete-all');
+    const btnDelPeriod = document.getElementById('btn-delete-period');
+
+    if (btnDelAll) {
+        btnDelAll.onclick = async () => {
+            if (!confirm("🚨 ¿ESTÁS SEGURO? Esta acción borrará TODO el historial de productividad permanentemente.")) return;
+            if (!confirm("⚠️ SEGUNDA CONFIRMACIÓN: ¿Realmente quieres limpiar toda la base de datos para iniciar producción?")) return;
+            
+            if (window.db) {
+                await window.db.ref('productivity').remove();
+                alert("Base de datos de productividad limpiada con éxito.");
+            } else {
+                productivityData = {};
+                localStorage.setItem('jabil_proto_data', '{}');
+                refreshUI();
+                alert("Datos locales borrados.");
+            }
+        };
+    }
+
+    if (btnDelPeriod) {
+        btnDelPeriod.onclick = async () => {
+            const start = document.getElementById('delete-date-start').value;
+            const end = document.getElementById('delete-date-end').value;
+
+            if (!start || !end) { alert("Selecciona ambas fechas (Inicio y Fin)."); return; }
+            if (start > end) { alert("La fecha de inicio no puede ser mayor a la de fin."); return; }
+
+            if (!confirm(`¿Borrar todos los registros desde ${start} hasta ${end}?`)) return;
+
+            if (window.db) {
+                const updates = {};
+                // Buscar días que caigan en el rango
+                Object.keys(productivityData).forEach(day => {
+                    if (day >= start && day <= end) {
+                        updates[day] = null; // Marcar para borrar en Firebase
+                    }
+                });
+
+                if (Object.keys(updates).length === 0) {
+                    alert("No se encontraron registros en ese rango de fechas.");
+                    return;
+                }
+
+                await window.db.ref('productivity').update(updates);
+                alert("Registros del periodo borrados con éxito.");
+            } else {
+                alert("Esta función requiere conexión a Firebase.");
+            }
+        };
+    }
+
     renderAdminTable();
 }
 
