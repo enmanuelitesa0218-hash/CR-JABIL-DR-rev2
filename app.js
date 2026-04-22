@@ -295,9 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------
 // DATE / CLOCK
 // ------------------------------------------
-function updateDate() {
+function updateDateDisplay() {
     const el = document.getElementById('current-date');
     if (el) el.textContent = new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function updateDate() {
+    updateDateDisplay();
 
     const nowStr = new Date().toISOString().split('T')[0];
     const s = document.getElementById('filter-date-start');
@@ -307,6 +311,11 @@ function updateDate() {
 
     [s, e].forEach(el => {
         if (el) el.addEventListener('change', () => {
+            // Si el usuario cambia la fecha manualmente, marcar que ya no es "Auto Today"
+            const nowStr = new Date().toISOString().split('T')[0];
+            if (el.value !== nowStr) el.dataset.isAutoToday = "false";
+            else el.dataset.isAutoToday = "true";
+
             updateKPIs();
             renderDashboard();
             if (document.getElementById('grafica-view')?.classList.contains('active')) renderChart();
@@ -314,6 +323,24 @@ function updateDate() {
     });
 
     initClock();
+
+    // Verificación de cambio de día (reset a medianoche)
+    setInterval(() => {
+        const nowStr = new Date().toISOString().split('T')[0];
+        const s = document.getElementById('filter-date-start');
+        const e = document.getElementById('filter-date-end');
+        
+        // Si el día cambió y estamos viendo "hoy", actualizar filtros automáticamente
+        if (s && e && s.value !== nowStr && s.dataset.isAutoToday !== "false") {
+            console.log("🕛 Medianoche detectada. Reiniciando dashboard para el nuevo día...");
+            s.value = nowStr;
+            e.value = nowStr;
+            updateDateDisplay(); // Actualizar el texto largo de la fecha
+            updateKPIs();
+            renderDashboard();
+            if (document.getElementById('grafica-view')?.classList.contains('active')) renderChart();
+        }
+    }, 60000); // Revisar cada minuto
 
     const tt = document.getElementById('theme-toggle');
     if (tt) {
